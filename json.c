@@ -89,7 +89,7 @@ char* next_string(FILE* json)
     c = next_c(json);
   }
   buffer[i] = 0;
-  return _strdup(buffer);
+  return strdup(buffer);
 }
 
 // next_number(f) returns the next floating point value on the json file
