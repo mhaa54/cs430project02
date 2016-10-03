@@ -1,8 +1,6 @@
 #include "json.h"
 
-#ifdef _WIN32
-  #pragma warning(disable:4996)
-#endif
+
 
 // line counter
 int line = 1;
@@ -243,7 +241,7 @@ void read_scene(const char *filename, int *n, node *scene)
 		{
 			ungetc(c, json);
 			next_object(json, &scene[*n]);
-			*n++;
+			*n = *n + 1;
 		}
 		else
 		{
