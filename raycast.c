@@ -24,11 +24,125 @@ int nNodes;
 int width, height;
 
 
+// compute the intersection between ray and plane
+// intersection should be between near clipping plane and far clipping plane
+// otherwise it is discarded
+int ray_plane(double *u, node *pNode, double *result)
+{
+  double *n = pNode->normal;
+  double *p = pNode->position;
+
+  double dot_npos = n[0] * p[0] + n[1] * p[1] + n[2] * p[2];
+  double dot_nu   = n[0] * u[0] + n[1] * u[1] + n[2] * u[2];
+
+  // almost divide by zero
+  if (fabs(dot_nu) <= 0.0001)
+    return 0;
+
+  // compute the value of t where the ray intersects the plane
+  double t = dot_npos / dot_nu;
+
+  // result = [0,0,0] + T * u
+  result[0] = t*u[0];
+  result[1] = t*u[1];
+  result[2] = t*u[2];
+
+  // intersection is valid if z is between near and far clipping planes
+  return (result[2] <= -zp && result[2] >= -fcp) ? 1 : 0;
+}
+
+// compute the intersection between ray and sphere
+// intersection should be between near clipping plane and far clipping plane
+// otherwise it is discarded
+int ray_sphere(double *u, node *pNode, double *result)
+{
+  double *c = pNode->position;
+  double r = pNode->radius;
+
+  // tclose = pr + dot(u,c) ... but pr = [0,0,0]
+  double tclose = u[0] * c[0] + u[1] * c[1] + u[2] * c[2];
+
+  // compute xClose 
+  double pclose[3];
+  pclose[0] = tclose * u[0];
+  pclose[1] = tclose * u[1];
+  pclose[2] = tclose * u[2];
+
+  double d = sqrt(
+    (pclose[0] - c[0])*(pclose[0] - c[0]) +
+    (pclose[1] - c[1])*(pclose[1] - c[1]) +
+    (pclose[2] - c[2])*(pclose[2] - c[2]));
+  if (d > r) // no intersection
+    return 0;
+  if (d == r) // one intersection
+  {
+    // out of clipping planes
+    if (pclose[2] > -zp || pclose[2] < -fcp)
+      return 0;
+
+    // inside clipping planes...then copy the result
+    memcpy(result, pclose, sizeof(double) * 3);
+    return 1;
+  }
+
+  // default case, d < r; we have 2 intersections
+  double a = sqrt(r*r - d*d);
+  result[0] = (tclose - a)*u[0];
+  result[1] = (tclose - a)*u[1];
+  result[2] = (tclose - a)*u[2];
+  return 1;
+}
+
+
 // return 1 if we found an intersection of the vector "u" with the scene
 // pos is the resulting hit position in the space, and "index" the resulting object index
 int shoot(double *u, double *pos, int *index)
 {
-  return 1;
+  int closest_index = -1;
+  double closest_distance = 0.0;
+  double closest_intersection_point[3];
+  double intersection_point[3];
+  for (int i = 0; i < nNodes; i++)
+  {
+    if (strcmp(scene[i].type, "plane") == 0)
+    {
+      if (ray_plane(u, &scene[i], intersection_point))
+      {
+        double distance = sqrt(intersection_point[0] * intersection_point[0] + 
+                               intersection_point[1] * intersection_point[1] + 
+                               intersection_point[2] * intersection_point[2]);
+        if (closest_index == -1 || distance < closest_distance)
+        {
+          closest_distance = distance;
+          memcpy(closest_intersection_point, intersection_point, sizeof(double) * 3);
+          closest_index = i;
+        }
+      }
+    }
+    else if (strcmp(scene[i].type, "sphere") == 0)
+    {
+      if (ray_sphere(u, &scene[i], intersection_point))
+      {
+        double distance = sqrt(intersection_point[0] * intersection_point[0] +
+          intersection_point[1] * intersection_point[1] +
+          intersection_point[2] * intersection_point[2]);
+        if (closest_index == -1 || distance < closest_distance)
+        {
+          closest_distance = distance;
+          memcpy(closest_intersection_point, intersection_point, sizeof(double) * 3);
+          closest_index = i;
+        }
+      }
+    }
+  }
+
+  if (closest_index >= 0)
+  {
+    *index = closest_index;
+    memcpy(pos, closest_intersection_point, sizeof(double) * 3);
+    return 1;
+  }
+  return 0;
 }
 
 // to the ray casting, and save it into filename
@@ -96,7 +210,7 @@ void ray_casting(const char *filename)
   double pixwidth = w / (double)width;
   
   // for each row 
-  for(int i = 0; i < pixheight; i++)
+  for(int i = 0; i < height; i++)
   { 
     // y coord of row 
     double py = -h/2.0 + pixheight * (i + 0.5);
@@ -122,19 +236,40 @@ void ray_casting(const char *filename)
       if (shoot(ur, hit, &index))
       {
         // pixel colored by object hit 
+        int k = i * width + j;
+        if (scene[index].color != NULL) // object should have a color... otherwise, nothing to do!
+        {
+          imageR[k] = (unsigned char)(scene[index].color[0] * 255.0);
+          imageG[k] = (unsigned char)(scene[index].color[1] * 255.0);
+          imageB[k] = (unsigned char)(scene[index].color[2] * 255.0);
+        }
       }
-
     } 
   }  
 
 
   // save ppm file
-  writePPM6(imageR, imageG, imageB, height, width, filename);
+  writePPM3(imageR, imageG, imageB, height, width, filename);
 
   // free image
   free(imageR);
   free(imageG);
   free(imageB);
+}
+
+void free_scene()
+{
+  for (int i = 0; i < nNodes; i++)
+  {
+    if (scene[i].color != NULL)
+      free(scene[i].color);
+    if (scene[i].position != NULL)
+      free(scene[i].position);
+    if (scene[i].normal != NULL)
+      free(scene[i].normal);
+    if (scene[i].type != NULL)
+      free(scene[i].type);
+  }
 }
 
 int main(int argc, char *argv[])
@@ -158,9 +293,11 @@ int main(int argc, char *argv[])
 		fprintf(stderr, "Wrong output image size. Please, use any size between 1..4096\n");
 		return 1;
 	}
-	
+
+  // clear all possible nodes of the array
+  memset(scene, 0, sizeof(node) * MAX_NODES);
 	read_scene(argv[3], &nNodes, scene);
 	ray_casting(argv[4]);
-	
+  free_scene();
 	return 0;
 } 

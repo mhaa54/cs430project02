@@ -1,5 +1,5 @@
 #include "json.h"
-
+#include <math.h>
 
 
 // line counter
@@ -89,7 +89,7 @@ char* next_string(FILE* json)
     c = next_c(json);
   }
   buffer[i] = 0;
-  return strdup(buffer);
+  return _strdup(buffer);
 }
 
 // next_number(f) returns the next floating point value on the json file
@@ -190,7 +190,17 @@ void next_object(FILE *json, node *pNode)
       else if (strcmp(name, "position") == 0)
         pNode->position = v;
       else
+      {
+        // normalize, in case it is not
+        double norm = sqrt(v[0] * v[0] + v[1] * v[1] + v[2] * v[2]);
+        if (norm > 0.0 && norm != 1.0)
+        {
+          v[0] /= norm;
+          v[1] /= norm;
+          v[2] /= norm;
+        }
         pNode->normal = v;
+      }
     }
     else
     {
