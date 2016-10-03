@@ -4,6 +4,9 @@
 #include <stdlib.h>
 #include <string.h>
 
+#ifdef _WIN32
+#pragma warning(disable:4996)
+#endif
 
 // json node
 typedef struct node
