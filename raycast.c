@@ -236,7 +236,7 @@ void ray_casting(const char *filename)
       if (shoot(ur, hit, &index))
       {
         // pixel colored by object hit 
-        int k = i * width + j;
+        int k = i * width + (height-1-j);
         if (scene[index].color != NULL) // object should have a color... otherwise, nothing to do!
         {
           imageR[k] = (unsigned char)(scene[index].color[0] * 255.0);
