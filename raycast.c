@@ -48,7 +48,7 @@ int ray_plane(double *u, node *pNode, double *result)
   result[2] = t*u[2];
 
   // intersection is valid if z is between near and far clipping planes
-  return (result[2] <= -zp && result[2] >= -fcp) ? 1 : 0;
+  return (result[2] >= zp && result[2] <= fcp) ? 1 : 0;
 }
 
 // compute the intersection between ray and sphere
@@ -77,7 +77,7 @@ int ray_sphere(double *u, node *pNode, double *result)
   if (d == r) // one intersection
   {
     // out of clipping planes
-    if (pclose[2] > -zp || pclose[2] < -fcp)
+    if (pclose[2] < zp || pclose[2] > fcp)
       return 0;
 
     // inside clipping planes...then copy the result
@@ -90,7 +90,7 @@ int ray_sphere(double *u, node *pNode, double *result)
   result[0] = (tclose - a)*u[0];
   result[1] = (tclose - a)*u[1];
   result[2] = (tclose - a)*u[2];
-  return 1;
+  return (result[2] >= zp && result[2] <= fcp) ? 1 : 0;
 }
 
 
@@ -222,7 +222,7 @@ void ray_casting(const char *filename)
       double px = -w/2.0 + pixwidth * (j + 0.5);
 
       // z coord is on screen 
-      double pz = -zp;
+      double pz = zp;
 
       // length of p vector
       double norm = sqrt(px*px + py*py + pz*pz);
@@ -236,8 +236,10 @@ void ray_casting(const char *filename)
       if (shoot(ur, hit, &index))
       {
         // pixel colored by object hit 
-        int k = i * width + (height-1-j);
-        if (scene[index].color != NULL) // object should have a color... otherwise, nothing to do!
+        int k = (height-1-i) * width + j;
+        
+        // object should have a color... otherwise, nothing to do!
+        if (scene[index].color != NULL) 
         {
           imageR[k] = (unsigned char)(scene[index].color[0] * 255.0);
           imageG[k] = (unsigned char)(scene[index].color[1] * 255.0);

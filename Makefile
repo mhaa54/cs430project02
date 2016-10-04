@@ -1,17 +1,15 @@
 
-# File: Makefile.mak
+# File: Makefile
 
-all: raycast.o json.o ppmrw_io.o
-	gcc raycast.o json.o ppmrw_io.o -o raycast
-	
-raycast.o: raycast.c
-	gcc -c raycast.c
-	
+
+all: json.c json.h ppmrw_io.c ppmrw_io.h raycast.c
+	gcc raycast.c json.c ppmrw_io.c -o raycast
+
 json.o: json.c json.h
-	gcc -c json.c
+	gcc -c json.c -o json.o
 	
 ppmrw_io.o: ppmrw_io.c ppmrw_io.h
-	gcc -c ppmrw_io.c
+	gcc -c ppmrw_io.c -o ppmrw_io.o
 
 clean:
 	rm *.o raycast
