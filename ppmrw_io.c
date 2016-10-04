@@ -131,7 +131,11 @@ int readPPM( const char *ipf, unsigned char **imageR, unsigned char **imageG, un
 			 */
 			for(index = 0; index < imgSize; index ++)
 			{
-				fscanf(outFp, "%d %d %d ", (*imageR) + index, (*imageG) + index, (*imageB) + index);
+				int r,g,b;
+				fscanf(outFp, "%d %d %d ", &r, &g, &b);
+				(*imageR)[index] = (unsigned int)r;
+				(*imageG)[index] = (unsigned int)g;
+				(*imageB)[index] = (unsigned int)b;
 			}
 			
 			break;
